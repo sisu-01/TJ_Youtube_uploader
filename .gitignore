@@ -1,0 +1,7 @@
+*.mp3
+*.mp4
+*.pyc
+*.env
+__pycache__
+done/
+source/
