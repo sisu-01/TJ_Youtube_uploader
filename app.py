@@ -10,14 +10,17 @@ DONE_DIR = './done'
 FONT_REG = r"C:\Windows\Fonts\malgun.ttf"
 FONT_BOLD = r"C:\Windows\Fonts\malgunbd.ttf" 
 
-TARGET_RES = (1280, 720)
+# 해상도 및 스케일 설정 (720p -> 1080p 비율인 1.5배 적용)
+TARGET_RES = (1920, 1080)
+SCALE = 1.5 
+
 THREADS = 8
 PRESET = 'ultrafast'
 
-COLOR_BG = (18, 18, 18)        
+COLOR_BG = (18, 18, 18)         
 COLOR_SINGER = (150, 230, 255) 
 COLOR_TITLE = (255, 255, 255)
-COLOR_DATE = (100, 100, 100)    # 날짜용 차분한 회색
+COLOR_DATE = (100, 100, 100)    
 
 def setup_directories():
     if not os.path.exists(SOURCE_DIR): os.makedirs(SOURCE_DIR)
@@ -47,7 +50,7 @@ def get_song_data(music_number):
 
 def create_gradient_bar(size, duration):
     w, h = size
-    bar_h = 6 
+    bar_h = int(6 * SCALE) 
     grad = np.zeros((bar_h, w, 3), dtype=np.uint8)
     for x in range(w):
         r = int(x / w * 255)
@@ -61,10 +64,8 @@ def format_seconds_to_timestamp(seconds):
     secs = int(seconds % 60)
     return f"{minutes:02d}:{secs:02d}"
 
-# 파일명에서 날짜(YYYY.MM.DD) 추출 함수
 def extract_date_str(filename):
     try:
-        # yyyymmddtt... 형태에서 앞 8자리 추출
         date_part = filename.split('_')[0][:8]
         return f"{date_part[:4]}.{date_part[4:6]}.{date_part[6:8]}"
     except:
@@ -75,13 +76,12 @@ def main():
     setup_directories()
     
     all_files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith('.mp3') and '_' in f]
-    all_files.sort(key=lambda x: x.split('_')[0], reverse=True) # 내림차순
+    all_files.sort(key=lambda x: x.split('_')[0], reverse=True) 
     
     if not all_files:
         print("파일이 없습니다.")
         return
 
-    # 첫 번째 파일의 날짜 확보
     display_date = extract_date_str(all_files[0])
 
     video_clips = []
@@ -89,7 +89,7 @@ def main():
     chapter_data = []
     current_time = 0.0
 
-    print(f"--- 상업적 디자인 모드 시작 (기준 날짜: {display_date}) ---")
+    print(f"--- 시작 (기준 날짜: {display_date}) ---")
     
     for file_name in all_files:
         base_name = os.path.splitext(file_name)[0]
@@ -107,35 +107,38 @@ def main():
         chapter_data.append(f"{timestamp} {title} - {singer}")
         print(f"처리 중: [{timestamp}] {title}")
         
-        # 1. 배경 및 바
+        # 1. 배경 및 하단 그라데이션 바
         bg_clip = ColorClip(size=TARGET_RES, color=COLOR_BG).with_duration(dur)
         grad_bar = create_gradient_bar(TARGET_RES, dur)
         
         text_clips = []
         try:
-            # 날짜 표시 (우측 상단) - 화면 우측 끝에서 40픽셀 띄우기
+            # 날짜 표시 (글자 크기 24 -> 36)
             date_clip = TextClip(
-                text=display_date, font=FONT_REG, font_size=24, color=COLOR_DATE
+                text=display_date, font=FONT_REG, font_size=int(24 * SCALE), color=COLOR_DATE
             ).with_duration(dur)
-            # (전체화면 가로 - 텍스트 가로길이 - 우측여백 40px, 상단여백 40px)
-            x_pos = TARGET_RES[0] - date_clip.size[0] - 40
-            y_pos = 40
+            
+            # 우측/상단 여백도 1.5배 (40px -> 60px)
+            margin = int(40 * SCALE)
+            x_pos = TARGET_RES[0] - date_clip.size[0] - margin
+            y_pos = margin
             date_clip = date_clip.with_position((x_pos, y_pos))
             text_clips.append(date_clip)
 
-            # 가수 이름 (상단 40%)
+            # 가수 이름 (글자 크기 30 -> 45, 위치 40% 지점)
             singer_clip = TextClip(
-                text=singer, font=FONT_REG, font_size=30, color=COLOR_SINGER
+                text=singer, font=FONT_REG, font_size=int(30 * SCALE), color=COLOR_SINGER
             ).with_duration(dur).with_position(('center', 0.4), relative=True)
             text_clips.append(singer_clip)
             
-            # 노래 제목 (중앙 50%)
+            # 노래 제목 (글자 크기 60 -> 90, 위치 50% 지점)
             title_clip = TextClip(
-                text=title, font=FONT_BOLD, font_size=60, color=COLOR_TITLE
+                text=title, font=FONT_BOLD, font_size=int(60 * SCALE), color=COLOR_TITLE
             ).with_duration(dur).with_position(('center', 0.5), relative=True)
             text_clips.append(title_clip)
-        except:
-            err_clip = TextClip(text=title, font_size=50, color='white').with_duration(dur).with_position('center')
+            
+        except Exception as e:
+            err_clip = TextClip(text=title, font_size=int(50 * SCALE), color='white').with_duration(dur).with_position('center')
             text_clips.append(err_clip)
 
         final_segment = CompositeVideoClip([bg_clip, grad_bar] + text_clips).with_audio(audio)
@@ -146,10 +149,11 @@ def main():
     if video_clips:
         print(f"--- 인코딩 시작 ---")
         final_video = concatenate_videoclips(video_clips)
-        video_output = os.path.join(DONE_DIR, f'playlist_{display_date.replace(".","")}.mp4')
+        video_output = os.path.join(DONE_DIR, f'playlist_{display_date.replace(".","-")}.mp4')
         
+        # FPS 1로 유지하여 인코딩 속도 최적화
         final_video.write_videofile(
-            video_output, fps=24, codec="libx264", audio_codec="aac",
+            video_output, fps=1, codec="libx264", audio_codec="aac",
             threads=THREADS, preset=PRESET
         )
         
