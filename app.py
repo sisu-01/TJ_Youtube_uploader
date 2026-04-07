@@ -3,6 +3,7 @@ import requests
 import numpy as np
 from bs4 import BeautifulSoup
 from moviepy import AudioFileClip, TextClip, ColorClip, CompositeVideoClip, concatenate_videoclips, ImageClip
+from upload_video import upload_to_youtube
 
 # --- [1. 설정 구간] ---
 SOURCE_DIR = './source'
@@ -20,7 +21,9 @@ PRESET = 'ultrafast'
 COLOR_BG = (18, 18, 18)         
 COLOR_SINGER = (150, 230, 255) 
 COLOR_TITLE = (255, 255, 255)
-COLOR_DATE = (100, 100, 100)    
+COLOR_DATE = (100, 100, 100)
+
+PLAYLIST_ID = "PL9f4WqL33igmWAhEZLkTkQ0VwmZ8z-l3K"
 
 def setup_directories():
     if not os.path.exists(SOURCE_DIR): os.makedirs(SOURCE_DIR)
@@ -67,7 +70,7 @@ def format_seconds_to_timestamp(seconds):
 def extract_date_str(filename):
     try:
         date_part = filename.split('_')[0][:8]
-        return f"{date_part[:4]}.{date_part[4:6]}.{date_part[6:8]}"
+        return f"{date_part[:4]}-{date_part[4:6]}-{date_part[6:8]}"
     except:
         return ""
 
@@ -149,7 +152,7 @@ def main():
     if video_clips:
         print(f"--- 인코딩 시작 ---")
         final_video = concatenate_videoclips(video_clips)
-        video_output = os.path.join(DONE_DIR, f'playlist_{display_date.replace(".","-")}.mp4')
+        video_output = os.path.join(DONE_DIR, f'playlist_{display_date}.mp4')
         
         # FPS 1로 유지하여 인코딩 속도 최적화
         final_video.write_videofile(
@@ -166,5 +169,19 @@ def main():
             except: pass
         print(f"\n✅ 제작 완료! 파일명: {video_output}")
 
+        print("\n--- 유튜브 업로드 준비 ---")
+        youtube_title = f"노래방 녹음 {display_date}"
+        
+        # 챕터(타임스탬프) 데이터를 유튜브 설명란에 텍스트로 넣기
+        youtube_desc = f"{display_date} 노래방 녹음입니다.\n\n[타임라인]\n" + '\n'.join(chapter_data)
+        
+        try:
+            upload_to_youtube(video_output, youtube_title, youtube_desc, PLAYLIST_ID)
+        except Exception as e:
+            print(f"업로드 중 오류 발생: {e}")
+
+
 if __name__ == "__main__":
     main()
+    print("\n" + "="*40)
+    input("프로그램이 완료되었습니다. 엔터(Enter) 키를 누르면 창이 닫힙니다...")
