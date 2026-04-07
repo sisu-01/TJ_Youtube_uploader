@@ -2,6 +2,11 @@
 *.mp4
 *.pyc
 *.env
-__pycache__
+*.json
+__pycache__/
+*.py[cod]
+venv/
+.env
+token.pickle
 done/
 source/
