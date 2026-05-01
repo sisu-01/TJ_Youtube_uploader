@@ -152,7 +152,7 @@ def main():
     if video_clips:
         print(f"--- 인코딩 시작 ---")
         final_video = concatenate_videoclips(video_clips)
-        video_output = os.path.join(DONE_DIR, f'playlist_{display_date}.mp4')
+        video_output = os.path.join(DONE_DIR, f'노래방_녹음_{display_date}.mp4')
         
         # FPS 1로 유지하여 인코딩 속도 최적화
         final_video.write_videofile(
