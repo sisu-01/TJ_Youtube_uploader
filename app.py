@@ -63,9 +63,14 @@ def create_gradient_bar(size, duration):
     return ImageClip(grad).with_duration(duration).with_position(('center', 'bottom'))
 
 def format_seconds_to_timestamp(seconds):
-    minutes = int(seconds // 60)
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
-    return f"{minutes:02d}:{secs:02d}"
+    
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    else:
+        return f"{minutes:02d}:{secs:02d}"
 
 def extract_date_str(filename):
     try:
