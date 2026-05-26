@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개인정보처리방침 - TJ_Youtube_uploader</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 40px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 { font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 25px; }
+        h2 { font-size: 18px; margin-top: 30px; margin-bottom: 10px; }
+        p, li { font-size: 14px; color: #444; }
+        .highlight { background-color: #fff9db; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+        .back-link { margin-top: 40px; display: block; color: #0066cc; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>개인정보처리방침 (Privacy Policy)</h1>
+        <p>본 개인정보처리방침은 'TJ_Youtube_uploader' 애플리케이션이 <span class="highlight">Google API 서비스(YouTube Data API)</span>를 통해 접하는 데이터의 처리 방식을 설명합니다.</p>
+
+        <h2>1. 수집하는 데이터 및 이용 목적</h2>
+        <p>본 애플리케이션은 노래방 보컬 녹음 파일(MP3)을 영상으로 변환하여 유튜브에 업로드하는 기능을 수행하며, 다음의 권한을 요청합니다.</p>
+        <ul>
+            <li><strong>YouTube 영상 업로드 권한:</strong> 생성된 MP4 영상 파일과 자동 생성된 타임스탬프(설명란)를 유튜브 채널에 업로드하기 위해 사용됩니다.</li>
+            <li><strong>YouTube 재생목록(Playlist) 관리 권한:</strong> 업로드된 영상을 사용자가 지정한 재생목록에 자동으로 추가하기 위해 사용됩니다.</li>
+            <li><strong>공개 데이터 조회:</strong> 파일명에 포함된 곡 번호를 기반으로 TJ미디어 웹사이트에서 곡 제목과 가수 정보를 조회(Scraping)합니다. 이 과정에서 개인정보는 전송되지 않습니다.</li>
+        </ul>
+
+        <h2>2. 데이터의 로컬 처리 및 파기</h2>
+        <p>본 프로그램은 <span class="highlight">외부 백엔드 서버가 없는 순수 로컬 클라이언트 프로그램</span>입니다.</p>
+        <ul>
+            <li><strong>데이터 파기:</strong> 동영상 인코딩 및 유튜브 업로드가 성공적으로 완료되면, 로컬 기기 내의 원본 MP3 파일들은 프로그램에 의해 즉시 영구 삭제(os.remove)되어 저장 공간을 보호합니다.</li>
+            <li><strong>토큰 보관:</strong> 구글 인증을 위한 토큰은 로컬 환경에만 안전하게 보관되며 외부로 유출되지 않습니다.</li>
+        </ul>
+
+        <h2>3. Google 및 YouTube 정책 준수</h2>
+        <p>본 애플리케이션은 Google API 서비스 사용자 데이터 정책(제한된 사용 요구사항 포함)을 철저히 준수합니다.</p>
+        <ul>
+            <li><a href="https://www.youtube.com/t/terms" target="_blank">YouTube 서비스 약관</a></li>
+            <li><a href="http://www.google.com/policies/privacy" target="_blank">Google 개인정보처리방침</a></li>
+        </ul>
+
+        <h2>4. 권한 철회</h2>
+        <p>사용자는 <a href="https://myaccount.google.com/permissions" target="_blank">Google 보안 설정</a>에서 언제든 본 앱의 접근 권한을 철회할 수 있습니다.</p>
+
+        <a href="index.html" class="back-link">← 홈으로 돌아가기</a>
+    </div>
+</body>
+</html>
