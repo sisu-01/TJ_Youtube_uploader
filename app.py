@@ -1179,18 +1179,6 @@ def main():
 
         final_video.close()
 
-        for f_path in processed_paths:
-
-            try:
-
-                os.remove(
-                    f_path
-                )
-
-            except Exception:
-
-                pass
-
         print(
             f"\n✅ 제작 완료! "
             f"파일명: {video_output}"
