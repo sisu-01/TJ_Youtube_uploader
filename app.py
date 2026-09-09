@@ -84,11 +84,11 @@ PLAYBACK_WIDTH = 600
 PLAYBACK_HEIGHT = 90
 
 PLAYBACK_X = 1250
-PLAYBACK_Y = 525
+PLAYBACK_Y = 500
 
 TIME_FONT_SIZE = 24
 
-PROGRESS_LEFT = 82
+PROGRESS_LEFT = 102
 PROGRESS_RIGHT = 518
 
 PROGRESS_Y = 31
@@ -543,18 +543,26 @@ def create_playback_frame(
     """
     재생바 RGB 이미지 + 투명도(mask)를 생성한다.
 
-    검은 배경은 만들지 않고,
-    실제로 그려지는 부분만 표시한다.
+    디자인:
+
+        ●────────────────────────
+        00:00                / 00:02
     """
 
+    # -----------------------------------------------------
     # RGB 이미지
+    # -----------------------------------------------------
+
     image = Image.new(
         'RGB',
         (width, height),
         (255, 255, 255)
     )
 
+    # -----------------------------------------------------
     # 투명도 마스크
+    # -----------------------------------------------------
+
     mask = Image.new(
         'L',
         (width, height),
@@ -569,13 +577,12 @@ def create_playback_frame(
             FONT_REG,
             TIME_FONT_SIZE
         )
-
     except Exception:
         font = ImageFont.load_default()
 
-    # -----------------------------------------------------
-    # 시간
-    # -----------------------------------------------------
+    # =====================================================
+    # 시간 문자열
+    # =====================================================
 
     current_text = format_seconds_to_timestamp(
         current_time
@@ -585,72 +592,23 @@ def create_playback_frame(
         duration
     )
 
-    # -----------------------------------------------------
-    # 현재 시간
-    # -----------------------------------------------------
-
-    draw.text(
-        (0, 12),
-        current_text,
-        font=font,
-        fill=COLOR_TIME
-    )
-
-    mask_draw.text(
-        (0, 12),
-        current_text,
-        font=font,
-        fill=255
-    )
-
-    # -----------------------------------------------------
-    # 전체 시간
-    # -----------------------------------------------------
-
-    duration_bbox = draw.textbbox(
-        (0, 0),
-        duration_text,
-        font=font
-    )
-
-    duration_width = (
-        duration_bbox[2]
-        - duration_bbox[0]
-    )
-
-    duration_x = (
-        width - duration_width
-    )
-
-    draw.text(
-        (duration_x, 12),
-        duration_text,
-        font=font,
-        fill=COLOR_TIME
-    )
-
-    mask_draw.text(
-        (duration_x, 12),
-        duration_text,
-        font=font,
-        fill=255
-    )
-
-    # -----------------------------------------------------
+    # =====================================================
     # 진행률
-    # -----------------------------------------------------
+    # =====================================================
 
     if duration <= 0:
         progress = 0.0
     else:
-        progress = (
-            current_time / duration
-        )
+        progress = current_time / duration
 
-        progress = max(
-            0.0,
-            min(1.0, progress)
-        )
+    progress = max(
+        0.0,
+        min(1.0, progress)
+    )
+
+    # =====================================================
+    # 재생바 위치
+    # =====================================================
 
     bar_left = PROGRESS_LEFT
     bar_right = PROGRESS_RIGHT
@@ -666,9 +624,9 @@ def create_playback_frame(
 
     bar_y = PROGRESS_Y
 
-    # -----------------------------------------------------
-    # 기본 바
-    # -----------------------------------------------------
+    # =====================================================
+    # 기본 재생바
+    # =====================================================
 
     draw.rectangle(
         (
@@ -690,9 +648,9 @@ def create_playback_frame(
         fill=255
     )
 
-    # -----------------------------------------------------
-    # 진행 바
-    # -----------------------------------------------------
+    # =====================================================
+    # 진행된 재생바
+    # =====================================================
 
     if current_x > bar_left:
 
@@ -716,9 +674,9 @@ def create_playback_frame(
             fill=255
         )
 
-    # -----------------------------------------------------
+    # =====================================================
     # 슬라이더
-    # -----------------------------------------------------
+    # =====================================================
 
     draw.ellipse(
         (
@@ -739,6 +697,83 @@ def create_playback_frame(
         ),
         fill=255
     )
+
+    # =====================================================
+    # 하단 시간
+    # =====================================================
+
+    time_y = 35
+
+    # -----------------------------------------------------
+    # 현재 시간
+    # 재생바의 왼쪽 끝에 맞춤
+    # -----------------------------------------------------
+
+    draw.text(
+        (
+            bar_left,
+            time_y
+        ),
+        current_text,
+        font=font,
+        fill=COLOR_TIME
+    )
+
+    mask_draw.text(
+        (
+            bar_left,
+            time_y
+        ),
+        current_text,
+        font=font,
+        fill=255
+    )
+
+    # -----------------------------------------------------
+    # 종료 시간
+    # 재생바의 오른쪽 끝에 맞춤
+    # -----------------------------------------------------
+
+    duration_display = f"/ {duration_text}"
+
+    duration_bbox = draw.textbbox(
+        (0, 0),
+        duration_display,
+        font=font
+    )
+
+    duration_width = (
+        duration_bbox[2]
+        - duration_bbox[0]
+    )
+
+    duration_x = (
+        bar_right - duration_width
+    )
+
+    draw.text(
+        (
+            duration_x,
+            time_y
+        ),
+        duration_display,
+        font=font,
+        fill=COLOR_TIME
+    )
+
+    mask_draw.text(
+        (
+            duration_x,
+            time_y
+        ),
+        duration_display,
+        font=font,
+        fill=255
+    )
+
+    # =====================================================
+    # 반환
+    # =====================================================
 
     return (
         np.array(image),
@@ -1168,7 +1203,7 @@ def main():
         print(
             "\n--- 유튜브 업로드 준비 ---"
         )
-        return True
+
         youtube_title = (
             f"노래방 녹음 {display_date}"
         )
