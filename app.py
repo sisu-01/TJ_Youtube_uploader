@@ -61,6 +61,13 @@ COLOR_PROGRESS_KNOB = (255, 255, 255)
 FOREGROUND_ALBUM_SIZE = 520
 FOREGROUND_ALBUM_RADIUS = 20
 
+# 중앙 앨범 아트 그림자
+ALBUM_SHADOW_COLOR = (0, 0, 0, 255)
+ALBUM_SHADOW_OFFSET_X = 0
+ALBUM_SHADOW_OFFSET_Y = 7
+ALBUM_SHADOW_BLUR = 18
+ALBUM_SHADOW_PADDING = 50
+
 BACKGROUND_BLUR_RADIUS = 25
 BACKGROUND_BRIGHTNESS = 0.35
 
@@ -70,10 +77,33 @@ BACKGROUND_BRIGHTNESS = 0.35
 # ---------------------------------------------------------
 
 TITLE_FONT_SIZE = 90
-ARTIST_FONT_SIZE = 50
+ARTIST_FONT_SIZE = 55
 
-TITLE_Y = 705
-ARTIST_Y = 855
+# 텍스트 화면 위치
+TITLE_X = 'center'
+TITLE_Y = 695
+ARTIST_X = 'center'
+ARTIST_Y = 795
+
+# ---------------------------------------------------------
+# 텍스트 그림자
+# ---------------------------------------------------------
+
+TITLE_SHADOW_COLOR = (0, 0, 0, 255)
+TITLE_SHADOW_OFFSET_X = 0
+TITLE_SHADOW_OFFSET_Y = 0
+TITLE_SHADOW_BLUR = 10
+
+ARTIST_SHADOW_COLOR = (255, 255, 255, 255)
+ARTIST_SHADOW_OFFSET_X = 0
+ARTIST_SHADOW_OFFSET_Y = 0
+ARTIST_SHADOW_BLUR = 20
+
+TEXT_SHADOW_PADDING = 30
+
+# PNG 미리보기 생성
+SAVE_PREVIEW = False
+PREVIEW_PATH = 'preview.png'
 
 
 # ---------------------------------------------------------
@@ -440,19 +470,19 @@ def create_foreground_album_clip(
             FOREGROUND_ALBUM_SIZE
         ),
         method=Image.Resampling.LANCZOS
-    )
+    ).convert('RGBA')
 
     # ---------------------------------------------
-    # border-radius
+    # 앨범 아트용 rounded mask
     # ---------------------------------------------
 
-    mask = Image.new(
+    album_mask = Image.new(
         'L',
         image.size,
         0
     )
 
-    draw = ImageDraw.Draw(mask)
+    draw = ImageDraw.Draw(album_mask)
 
     draw.rounded_rectangle(
         (
@@ -465,22 +495,94 @@ def create_foreground_album_clip(
         fill=255
     )
 
-    image_array = np.array(image)
-    mask_array = np.array(mask) / 255.0
+    # ---------------------------------------------
+    # 그림자가 잘리지 않도록 여백 확보
+    # ---------------------------------------------
+
+    padding = ALBUM_SHADOW_PADDING
+
+    canvas_size = (
+        image.width + padding * 2,
+        image.height + padding * 2
+    )
 
     # ---------------------------------------------
-    # 앨범 아트 위치
+    # Shadow Layer
     # ---------------------------------------------
-    y = 159
+
+    shadow = Image.new(
+        'RGBA',
+        canvas_size,
+        (0, 0, 0, 0)
+    )
+
+    shadow_mask = Image.new(
+        'L',
+        canvas_size,
+        0
+    )
+
+    shadow_mask.paste(
+        album_mask,
+        (
+            padding + ALBUM_SHADOW_OFFSET_X,
+            padding + ALBUM_SHADOW_OFFSET_Y
+        )
+    )
+
+    shadow_mask = shadow_mask.filter(
+        ImageFilter.GaussianBlur(
+            ALBUM_SHADOW_BLUR
+        )
+    )
+
+    shadow_alpha = shadow_mask.point(
+        lambda value: int(
+            value * ALBUM_SHADOW_COLOR[3] / 255
+        )
+    )
+
+    shadow_fill = Image.new(
+        'RGBA',
+        canvas_size,
+        ALBUM_SHADOW_COLOR[:3] + (0,)
+    )
+
+    shadow_fill.putalpha(shadow_alpha)
+
+    # ---------------------------------------------
+    # Text/Album Layer
+    # ---------------------------------------------
+
+    album_layer = Image.new(
+        'RGBA',
+        canvas_size,
+        (0, 0, 0, 0)
+    )
+
+    album_layer.paste(
+        image,
+        (padding, padding),
+        album_mask
+    )
+
+    # ---------------------------------------------
+    # 그림자 + 앨범을 하나의 이미지로 합침
+    # ---------------------------------------------
+
+    result = Image.alpha_composite(
+        shadow_fill,
+        album_layer
+    )
+
+    result_array = np.array(result)
+
+    # 기존 y=159의 위치를 그대로 유지하되,
+    # padding만큼 캔버스가 커졌으므로 화면상 앨범 위치가 변하지 않도록 보정한다.
+    y = 159 - padding
 
     return (
-        ImageClip(image_array)
-        .with_mask(
-            ImageClip(
-                mask_array,
-                is_mask=True
-            )
-        )
+        ImageClip(result_array)
         .with_duration(duration)
         .with_position(
             (
@@ -488,6 +590,157 @@ def create_foreground_album_clip(
                 y
             )
         )
+    )
+
+
+def create_text_shadow_clip(
+    text,
+    font_path,
+    font_size,
+    text_color,
+    shadow_color,
+    shadow_offset_x,
+    shadow_offset_y,
+    shadow_blur,
+    duration,
+    position,
+    preview_path=None
+):
+    """
+    PIL에서 텍스트와 그림자를 하나의 RGBA 이미지로 만든다.
+
+    그림자는 텍스트 RGBA 자체를 블러링하지 않고
+    흰색 L(알파) 마스크를 만든 뒤 GaussianBlur를 적용하고,
+    shadow_color의 RGB/alpha를 입혀 합성한다.
+
+    이렇게 하면 shadow alpha가 확실하게 유지되므로
+    SHADOW_BLUR가 큰 경우에도 외곽 그림자가 안정적으로 보인다.
+    """
+
+    try:
+        font = ImageFont.truetype(
+            font_path,
+            font_size
+        )
+    except Exception:
+        font = ImageFont.load_default()
+
+    # ---------------------------------------------------------
+    # 실제 텍스트 bounding box
+    # ---------------------------------------------------------
+    bbox = font.getbbox(text)
+
+    text_left = bbox[0]
+    text_top = bbox[1]
+    text_right = bbox[2]
+    text_bottom = bbox[3]
+
+    text_width = max(1, text_right - text_left)
+    text_height = max(1, text_bottom - text_top)
+
+    # GaussianBlur가 충분히 퍼질 공간 확보
+    padding = max(
+        int(TEXT_SHADOW_PADDING),
+        int(shadow_blur * 4) + abs(int(shadow_offset_x)) + 10,
+        int(shadow_blur * 4) + abs(int(shadow_offset_y)) + 10
+    )
+
+    canvas_width = text_width + padding * 2
+    canvas_height = text_height + padding * 2
+
+    # PIL의 draw.text 좌표와 실제 glyph 영역이 정확히 맞도록 보정
+    text_x = padding - text_left
+    text_y = padding - text_top
+
+    # =========================================================
+    # Shadow Mask
+    # =========================================================
+    shadow_mask = Image.new(
+        'L',
+        (canvas_width, canvas_height),
+        0
+    )
+
+    shadow_mask_draw = ImageDraw.Draw(shadow_mask)
+
+    shadow_mask_draw.text(
+        (
+            text_x + shadow_offset_x,
+            text_y + shadow_offset_y
+        ),
+        text,
+        font=font,
+        fill=255
+    )
+
+    shadow_mask = shadow_mask.filter(
+        ImageFilter.GaussianBlur(
+            radius=max(0, int(shadow_blur))
+        )
+    )
+
+    # shadow_color의 alpha를 blur된 mask에 곱함
+    shadow_alpha = shadow_mask.point(
+        lambda value: int(
+            value * shadow_color[3] / 255
+        )
+    )
+
+    shadow_layer = Image.new(
+        'RGBA',
+        (canvas_width, canvas_height),
+        shadow_color[:3] + (0,)
+    )
+
+    shadow_layer.putalpha(shadow_alpha)
+
+    # =========================================================
+    # Text Layer
+    # =========================================================
+    text_layer = Image.new(
+        'RGBA',
+        (canvas_width, canvas_height),
+        (0, 0, 0, 0)
+    )
+
+    text_draw = ImageDraw.Draw(text_layer)
+
+    text_draw.text(
+        (
+            text_x,
+            text_y
+        ),
+        text,
+        font=font,
+        fill=text_color
+    )
+
+    # =========================================================
+    # Shadow + Text
+    # =========================================================
+    result = Image.alpha_composite(
+        shadow_layer,
+        text_layer
+    )
+
+    result_array = np.array(result)
+
+    # ---------------------------------------------------------
+    # 디버깅용: 실제 생성된 텍스트 이미지 확인 가능
+    # ---------------------------------------------------------
+    if preview_path:
+        result.save(preview_path)
+
+    # IMPORTANT:
+    # 그림자와 텍스트는 이미 하나의 이미지이므로
+    # MoviePy에서는 ImageClip 하나만 이동한다.
+    return (
+        ImageClip(
+            result_array,
+            transparent=True
+        )
+        .with_duration(duration)
+        .with_position(position)
     )
 
 
@@ -1024,23 +1277,17 @@ def main():
 
         try:
 
-            title_clip = (
-                TextClip(
-                    text=title,
-                    font=FONT_BOLD,
-                    font_size=TITLE_FONT_SIZE,
-                    color=COLOR_TITLE,
-                    method='label',
-                    text_align='center',
-                    margin=(0, 20)
-                )
-                .with_duration(dur)
-                .with_position(
-                    (
-                        'center',
-                        TITLE_Y
-                    )
-                )
+            title_clip = create_text_shadow_clip(
+                text=title,
+                font_path=FONT_BOLD,
+                font_size=TITLE_FONT_SIZE,
+                text_color=COLOR_TITLE + (255,),
+                shadow_color=TITLE_SHADOW_COLOR,
+                shadow_offset_x=TITLE_SHADOW_OFFSET_X,
+                shadow_offset_y=TITLE_SHADOW_OFFSET_Y,
+                shadow_blur=TITLE_SHADOW_BLUR,
+                duration=dur,
+                position=(TITLE_X, TITLE_Y)
             )
 
             layers.append(
@@ -1059,23 +1306,17 @@ def main():
 
         try:
 
-            artist_clip = (
-                TextClip(
-                    text=singer,
-                    font=FONT_REG,
-                    font_size=ARTIST_FONT_SIZE,
-                    color=COLOR_ARTIST,
-                    method='label',
-                    text_align='center',
-                    margin=(0, 15)
-                )
-                .with_duration(dur)
-                .with_position(
-                    (
-                        'center',
-                        ARTIST_Y
-                    )
-                )
+            artist_clip = create_text_shadow_clip(
+                text=singer,
+                font_path=FONT_REG,
+                font_size=ARTIST_FONT_SIZE,
+                text_color=COLOR_ARTIST + (255,),
+                shadow_color=ARTIST_SHADOW_COLOR,
+                shadow_offset_x=ARTIST_SHADOW_OFFSET_X,
+                shadow_offset_y=ARTIST_SHADOW_OFFSET_Y,
+                shadow_blur=ARTIST_SHADOW_BLUR,
+                duration=dur,
+                position=(ARTIST_X, ARTIST_Y)
             )
 
             layers.append(
@@ -1113,6 +1354,20 @@ def main():
             )
             .with_audio(audio)
         )
+
+        # -------------------------------------------------
+        # 전체 1920x1080 합성 결과 미리보기
+        # -------------------------------------------------
+        # 개별 PIL 레이어가 아니라 모든 MoviePy 레이어를
+        # 실제 영상과 동일하게 합성한 첫 프레임을 저장한다.
+        if SAVE_PREVIEW and len(video_clips) == 0:
+            preview_frame = final_segment.get_frame(0)
+            Image.fromarray(preview_frame).convert('RGB').save(
+                PREVIEW_PATH
+            )
+            print(
+                f"\n미리보기 저장: {PREVIEW_PATH}"
+            )
 
         video_clips.append(
             final_segment
