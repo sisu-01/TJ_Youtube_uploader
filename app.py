@@ -35,7 +35,7 @@ TARGET_RES = (1920, 1080)
 THREADS = 8
 PRESET = 'ultrafast'
 
-VIDEO_FPS = 10
+VIDEO_FPS = 1
 
 
 # ---------------------------------------------------------
