@@ -19,6 +19,11 @@ from moviepy import (
 
 from upload_video import upload_to_youtube
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # =========================================================
 # [1. 설정]
@@ -131,7 +136,7 @@ PROGRESS_HEIGHT = 4
 KNOB_RADIUS = 7
 
 
-PLAYLIST_ID = "PL9f4WqL33igmWAhEZLkTkQ0VwmZ8z-l3K"
+PLAYLIST_ID = os.getenv("PLAYLIST_ID")
 
 
 # =========================================================
