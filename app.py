@@ -27,8 +27,12 @@ from upload_video import upload_to_youtube
 SOURCE_DIR = './source'
 DONE_DIR = './done'
 
-FONT_REG = r"C:\Windows\Fonts\malgun.ttf"
-FONT_BOLD = r"C:\Windows\Fonts\malgunbd.ttf"
+FONTS_DIR = Path("fonts")
+
+FONT_REG = str(FONTS_DIR / "Pretendard-Regular.otf")
+FONT_BOLD = str(FONTS_DIR / "Pretendard-Bold.otf")
+# FONT_REG = r"C:\Windows\Fonts\malgun.ttf"
+# FONT_BOLD = r"C:\Windows\Fonts\malgunbd.ttf"
 
 TARGET_RES = (1920, 1080)
 
