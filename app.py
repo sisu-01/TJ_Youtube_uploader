@@ -67,10 +67,12 @@ COLOR_PROGRESS_KNOB = (255, 255, 255)
 # 앨범 아트
 # ---------------------------------------------------------
 
-FOREGROUND_ALBUM_SIZE = 520
+FOREGROUND_ALBUM_SIZE = 550
+FOREGROUND_ALBUM_X = 250
+FOREGROUND_ALBUM_Y = 205
 FOREGROUND_ALBUM_RADIUS = 20
 
-# 중앙 앨범 아트 그림자
+# 앨범 아트 그림자
 ALBUM_SHADOW_COLOR = (0, 0, 0, 255)
 ALBUM_SHADOW_OFFSET_X = 0
 ALBUM_SHADOW_OFFSET_Y = 7
@@ -85,14 +87,14 @@ BACKGROUND_BRIGHTNESS = 0.35
 # 제목 / 가수
 # ---------------------------------------------------------
 
-TITLE_FONT_SIZE = 90
-ARTIST_FONT_SIZE = 55
+TITLE_FONT_SIZE = 76
+ARTIST_FONT_SIZE = 38
 
-# 텍스트 화면 위치
-TITLE_X = 'center'
-TITLE_Y = 695
-ARTIST_X = 'center'
-ARTIST_Y = 795
+# 텍스트의 실제 글자 영역 기준 위치 (1920x1080)
+TITLE_X = 885
+TITLE_Y = 390
+ARTIST_X = 885
+ARTIST_Y = 493
 
 # ---------------------------------------------------------
 # 텍스트 그림자
@@ -103,10 +105,10 @@ TITLE_SHADOW_OFFSET_X = 0
 TITLE_SHADOW_OFFSET_Y = 0
 TITLE_SHADOW_BLUR = 10
 
-ARTIST_SHADOW_COLOR = (255, 255, 255, 255)
+ARTIST_SHADOW_COLOR = (0, 0, 0, 190)
 ARTIST_SHADOW_OFFSET_X = 0
-ARTIST_SHADOW_OFFSET_Y = 0
-ARTIST_SHADOW_BLUR = 20
+ARTIST_SHADOW_OFFSET_Y = 1
+ARTIST_SHADOW_BLUR = 8
 
 TEXT_SHADOW_PADDING = 30
 
@@ -119,18 +121,19 @@ PREVIEW_PATH = 'preview.png'
 # 재생바
 # ---------------------------------------------------------
 
-PLAYBACK_WIDTH = 600
-PLAYBACK_HEIGHT = 90
+PLAYBACK_WIDTH = 1510
+PLAYBACK_HEIGHT = 100
 
-PLAYBACK_X = 1250
-PLAYBACK_Y = 500
+PLAYBACK_X = 206
+PLAYBACK_Y = 840
 
 TIME_FONT_SIZE = 24
 
-PROGRESS_LEFT = 102
-PROGRESS_RIGHT = 518
+# 화면 기준 x=213부터 x=1705까지 재생바가 표시되도록 여백 포함
+PROGRESS_LEFT = 7
+PROGRESS_RIGHT = 1499
 
-PROGRESS_Y = 31
+PROGRESS_Y = 30
 PROGRESS_HEIGHT = 4
 
 KNOB_RADIUS = 7
@@ -461,7 +464,7 @@ def create_background_from_album(
 
 
 # =========================================================
-# [6. 중앙 앨범 아트]
+# [6. 왼쪽 앨범 아트]
 # =========================================================
 
 def create_foreground_album_clip(
@@ -586,19 +589,15 @@ def create_foreground_album_clip(
 
     result_array = np.array(result)
 
-    # 기존 y=159의 위치를 그대로 유지하되,
-    # padding만큼 캔버스가 커졌으므로 화면상 앨범 위치가 변하지 않도록 보정한다.
-    y = 159 - padding
+    # 설정한 좌표는 그림자 여백이 아닌 앨범 아트 자체의 좌측 상단이다.
+    # 그림자 캔버스의 padding만큼 위치를 보정해 앨범 아트가 정확한 곳에 놓이게 한다.
+    x = FOREGROUND_ALBUM_X - padding
+    y = FOREGROUND_ALBUM_Y - padding
 
     return (
         ImageClip(result_array)
         .with_duration(duration)
-        .with_position(
-            (
-                'center',
-                y
-            )
-        )
+        .with_position((x, y))
     )
 
 
@@ -631,6 +630,28 @@ def create_text_shadow_clip(
             font_path,
             font_size
         )
+
+        # 긴 곡명도 오른쪽 영역을 벗어나지 않도록 필요할 때만 글자 크기를 줄인다.
+        if isinstance(position[0], (int, float)):
+            max_text_width = max(1, TARGET_RES[0] - int(position[0]) - 95)
+        else:
+            max_text_width = TARGET_RES[0] - 190
+        min_font_size = 28
+
+        while font_size > min_font_size:
+            measured_bbox = font.getbbox(text)
+            measured_width = max(1, measured_bbox[2] - measured_bbox[0])
+            if measured_width <= max_text_width:
+                break
+
+            scaled_size = int(font_size * max_text_width / measured_width)
+            next_size = max(min_font_size, min(font_size - 1, scaled_size))
+            if next_size >= font_size:
+                break
+
+            font_size = next_size
+            font = ImageFont.truetype(font_path, font_size)
+
     except Exception:
         font = ImageFont.load_default()
 
@@ -743,13 +764,18 @@ def create_text_shadow_clip(
     # IMPORTANT:
     # 그림자와 텍스트는 이미 하나의 이미지이므로
     # MoviePy에서는 ImageClip 하나만 이동한다.
+    # position은 글자 실제 영역의 좌측 상단 좌표다. 그림자 여백만큼 빼서 클립을 배치한다.
+    position_x, position_y = position
+    clip_x = 'center' if position_x == 'center' else int(position_x) - padding
+    clip_y = 'center' if position_y == 'center' else int(position_y) - padding
+
     return (
         ImageClip(
             result_array,
             transparent=True
         )
         .with_duration(duration)
-        .with_position(position)
+        .with_position((clip_x, clip_y))
     )
 
 
@@ -790,6 +816,18 @@ def format_seconds_to_timestamp(
         f"{minutes:02d}:"
         f"{secs:02d}"
     )
+
+
+def format_playback_time(seconds):
+    """재생바 전용 시간 표기: 1:42처럼 분의 불필요한 앞자리 0을 생략한다."""
+    seconds = max(0, int(seconds))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    return f"{minutes}:{secs:02d}"
 
 
 # =========================================================
@@ -846,11 +884,11 @@ def create_playback_frame(
     # 시간 문자열
     # =====================================================
 
-    current_text = format_seconds_to_timestamp(
+    current_text = format_playback_time(
         current_time
     )
 
-    duration_text = format_seconds_to_timestamp(
+    duration_text = format_playback_time(
         duration
     )
 
@@ -964,7 +1002,7 @@ def create_playback_frame(
     # 하단 시간
     # =====================================================
 
-    time_y = 35
+    time_y = 57
 
     # -----------------------------------------------------
     # 현재 시간
@@ -996,7 +1034,7 @@ def create_playback_frame(
     # 재생바의 오른쪽 끝에 맞춤
     # -----------------------------------------------------
 
-    duration_display = f"/ {duration_text}"
+    duration_display = duration_text
 
     duration_bbox = draw.textbbox(
         (0, 0),
@@ -1264,7 +1302,7 @@ def main():
         ]
 
         # -------------------------------------------------
-        # 중앙 앨범
+        # 왼쪽 앨범
         # -------------------------------------------------
 
         album_clip = (
@@ -1473,20 +1511,20 @@ def main():
             f"저작권자의 권리를 존중하며, 저작권 관련 문제가 발생할 경우 확인 후 필요한 조치를 취하겠습니다."
         )
 
-        try:
+        # try:
 
-            upload_to_youtube(
-                video_output,
-                youtube_title,
-                youtube_desc,
-                PLAYLIST_ID
-            )
+        #     upload_to_youtube(
+        #         video_output,
+        #         youtube_title,
+        #         youtube_desc,
+        #         PLAYLIST_ID
+        #     )
 
-        except Exception as e:
+        # except Exception as e:
 
-            print(
-                f"업로드 중 오류 발생: {e}"
-            )
+        #     print(
+        #         f"업로드 중 오류 발생: {e}"
+        #     )
 
 
 # =========================================================
