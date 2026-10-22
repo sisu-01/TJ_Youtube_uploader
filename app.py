@@ -1511,20 +1511,20 @@ def main():
             f"저작권자의 권리를 존중하며, 저작권 관련 문제가 발생할 경우 확인 후 필요한 조치를 취하겠습니다."
         )
 
-        # try:
+        try:
 
-        #     upload_to_youtube(
-        #         video_output,
-        #         youtube_title,
-        #         youtube_desc,
-        #         PLAYLIST_ID
-        #     )
+            upload_to_youtube(
+                video_output,
+                youtube_title,
+                youtube_desc,
+                PLAYLIST_ID
+            )
 
-        # except Exception as e:
+        except Exception as e:
 
-        #     print(
-        #         f"업로드 중 오류 발생: {e}"
-        #     )
+            print(
+                f"업로드 중 오류 발생: {e}"
+            )
 
 
 # =========================================================
