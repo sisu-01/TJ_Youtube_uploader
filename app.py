@@ -17,6 +17,7 @@ from moviepy import (
     VideoClip
 )
 
+from album_art import get_album_art
 from upload_video import upload_to_youtube
 
 from pathlib import Path
@@ -239,114 +240,114 @@ def get_song_data(music_number):
 # [4. 벅스 앨범 아트]
 # =========================================================
 
-def get_album_art(title, singer):
+# def get_album_art(title, singer):
 
-    encoded_title = title.replace(
-        ' ',
-        '%20'
-    )
+#     encoded_title = title.replace(
+#         ' ',
+#         '%20'
+#     )
 
-    encoded_singer = singer.replace(
-        ' ',
-        '%20'
-    )
+#     encoded_singer = singer.replace(
+#         ' ',
+#         '%20'
+#     )
 
-    query = (
-        f"{encoded_title}%20{encoded_singer}"
-    )
+#     query = (
+#         f"{encoded_title}%20{encoded_singer}"
+#     )
 
-    search_url = (
-        "https://music.bugs.co.kr/search/integrated"
-        f"?q={query}"
-    )
+#     search_url = (
+#         "https://music.bugs.co.kr/search/integrated"
+#         f"?q={query}"
+#     )
 
-    headers = {
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/140.0.0.0 Safari/537.36"
-    }
+#     headers = {
+#         "User-Agent":
+#             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+#             "AppleWebKit/537.36 (KHTML, like Gecko) "
+#             "Chrome/140.0.0.0 Safari/537.36"
+#     }
 
-    try:
+#     try:
 
-        response = requests.get(
-            search_url,
-            headers=headers,
-            timeout=60
-        )
+#         response = requests.get(
+#             search_url,
+#             headers=headers,
+#             timeout=60
+#         )
 
-        response.raise_for_status()
+#         response.raise_for_status()
 
-        soup = BeautifulSoup(
-            response.text,
-            'html.parser'
-        )
+#         soup = BeautifulSoup(
+#             response.text,
+#             'html.parser'
+#         )
 
-        first_track = soup.select_one(
-            'table.list.trackList > tbody > tr'
-        )
+#         first_track = soup.select_one(
+#             'table.list.trackList > tbody > tr'
+#         )
 
-        if not first_track:
+#         if not first_track:
 
-            print(
-                f"  └ 벅스 검색 결과 없음: "
-                f"{title} - {singer}"
-            )
+#             print(
+#                 f"  └ 벅스 검색 결과 없음: "
+#                 f"{title} - {singer}"
+#             )
 
-            return None
+#             return None
 
-        album_id = first_track.get(
-            'albumid'
-        )
+#         album_id = first_track.get(
+#             'albumid'
+#         )
 
-        if not album_id:
+#         if not album_id:
 
-            print(
-                f"  └ albumid 없음: "
-                f"{title} - {singer}"
-            )
+#             print(
+#                 f"  └ albumid 없음: "
+#                 f"{title} - {singer}"
+#             )
 
-            return None
+#             return None
 
-        album_folder = album_id[:-2]
+#         album_folder = album_id[:-2]
 
-        album_url = (
-            "https://image.bugsm.co.kr/"
-            "album/images/1000/"
-            f"{album_folder}/{album_id}.jpg"
-        )
+#         album_url = (
+#             "https://image.bugsm.co.kr/"
+#             "album/images/1000/"
+#             f"{album_folder}/{album_id}.jpg"
+#         )
 
-        print(
-            f"  └ albumid: {album_id}"
-        )
+#         print(
+#             f"  └ albumid: {album_id}"
+#         )
 
-        print(
-            f"  └ 앨범 이미지: {album_url}"
-        )
+#         print(
+#             f"  └ 앨범 이미지: {album_url}"
+#         )
 
-        image_response = requests.get(
-            album_url,
-            headers=headers,
-            timeout=60
-        )
+#         image_response = requests.get(
+#             album_url,
+#             headers=headers,
+#             timeout=60
+#         )
 
-        image_response.raise_for_status()
+#         image_response.raise_for_status()
 
-        image = Image.open(
-            BytesIO(
-                image_response.content
-            )
-        ).convert('RGB')
+#         image = Image.open(
+#             BytesIO(
+#                 image_response.content
+#             )
+#         ).convert('RGB')
 
-        return image
+#         return image
 
-    except Exception as e:
+#     except Exception as e:
 
-        print(
-            f"  └ 앨범 아트 가져오기 실패: {e}"
-        )
+#         print(
+#             f"  └ 앨범 아트 가져오기 실패: {e}"
+#         )
 
-        return None
+#         return None
 
 
 # =========================================================
